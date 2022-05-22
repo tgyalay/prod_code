@@ -1,6 +1,14 @@
+from ast import Assert
 import os
 import logging
-import churn_library_solution as cls
+from datetime import datetime
+from glob import glob
+
+import pandas as pd
+
+from churn_library import (import_data, perform_eda, 
+    perform_feature_engineering, encoder_helper, 
+    classification_report_image, feature_importance_plot, train_models)
 
 logging.basicConfig(
     filename='./logs/churn_library.log',
@@ -28,9 +36,46 @@ def test_import(import_data):
 
 
 def test_eda(perform_eda):
-	'''
-	test perform eda function
-	'''
+    '''
+    test perform eda function
+    '''
+    df = import_data('./data/bank_data.csv')
+    start_time = datetime.now()
+
+    try:
+        perform_eda(df)
+        logging.info('SUCCESS: No errors drawing plots')
+    except KeyError as err:
+        logging.error("For EDA to complete the columns need to include 'Churn'\
+            , 'Customer Age', 'Marital_Status', 'Total_Trans_Ct'")
+        raise err
+
+    required_files = set([
+        './images/eda/churn.png',
+        './images/eda/customer_age.png',
+        './images/eda/marital_status.png',
+        './images/eda/transaction_distribution.png',
+        './images/eda/correlation_heatmap.png',                        
+        ])
+    eda_files = set(glob('./images/eda/*'))
+
+    try:
+        #examine only the files we are looking for
+        #test that every required file is present in eda_files
+        eda_files &= required_files
+        assert required_files <= eda_files
+        logging.info('All required files are present')
+    except AssertionError as err:
+        logging.error('Some or all files were not produced!')
+        raise err
+
+    try:
+        creation_times_list = [os.path.getctime(file) for file in eda_files]
+        assert all(element-start_time > 0 for element in creation_times_list)
+        logging.info('All present files were updated')
+    except AssertionError as err:
+        logging.error('Some or all of the files were not updated!')
+        raise err
 
 
 def test_encoder_helper(encoder_helper):
