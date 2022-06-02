@@ -12,7 +12,7 @@ import constants
 
 logging.basicConfig(
     filename='logs/churn_library.log',
-    level = logging.INFO,
+    level = logging.DEBUG,
     filemode='w',
     format='%(name)s - %(levelname)s - %(message)s')
 
@@ -38,7 +38,7 @@ def output_file_checker(required_files):
                                    for file in found_files]
             assert all(element-begin_time > 0 
                        for element in creation_times_list)
-            logging.info('All present files were updated')
+            logging.info('All required files were updated')
         except AssertionError as err:
             logging.error('Some or all of the files were not updated!')
             raise err
