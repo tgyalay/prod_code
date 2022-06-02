@@ -7,6 +7,7 @@ This project aims to predict whether a customer is going to churn, by performing
 
 ## Files and data description
 Overview of the files and data present in the root directory. 
+```bash
 .
 ├── Guide.ipynb     # Given: getting started and t/s tips
 ├── churn_notebook.ipynb # Given: Original, unclean code
@@ -21,6 +22,7 @@ Overview of the files and data present in the root directory.
 │   └── results
 ├── logs                 # Store logs
 └── models               # Store models
+```
 
 ## Running Files
 ### Testing the files
