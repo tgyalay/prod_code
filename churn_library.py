@@ -1,5 +1,7 @@
-# library doc string
-
+''''
+This library contains two independent functions and a class for running
+thorugh the procedure of analyzing the data. 
+'''
 
 # import libraries
 import os
@@ -16,8 +18,6 @@ from sklearn.metrics import plot_roc_curve, classification_report
 import shap
 
 import constants
-
-os.environ['QT_QPA_PLATFORM']='offscreen'
 
 
 def import_data(pth):
@@ -55,6 +55,15 @@ def encoder_helper(df, category_lst, response):
 
 
 class ChurnAnaysis():
+    '''
+    used to perform analysis for customer churn. 
+
+    input:
+            df: pandas dataframe
+    
+    attributes:
+            df pandas dataframe
+    '''
     def __init__(self, pth):
         self.df = import_data(pth)
         self.df['Churn'] = self.df['Attrition_Flag'].apply(
@@ -64,7 +73,7 @@ class ChurnAnaysis():
         '''
         perform eda on df and save figures to images folder
         input:
-                df: pandas dataframe
+                None
 
         output:
                 None
@@ -94,16 +103,16 @@ class ChurnAnaysis():
 
         plt.figure(figsize=(20,10)) 
         sns.heatmap(self.df.corr(), annot=False, cmap='Dark2_r', linewidths=2)
+        plt.gcf().tight_layout()
         plt.savefig(image_dict['corr_heatmap'])
         plt.close()
 
     def perform_feature_engineering(self, response='Churn'):
         '''
         input:
-                df: pandas dataframe
                 response: string of response name [optional argument that could be used for naming variables or index y column]
 
-        output:
+        attributes:
                 X_train: X training data
                 X_test: X testing data
                 y_train: y training data
@@ -138,8 +147,6 @@ class ChurnAnaysis():
         produces classification report for training and testing results and stores report as image
         in images folder
         input:
-                y_train: training response values
-                y_test:  test response values
                 y_train_preds_lr: training predictions from logistic regression
                 y_train_preds_rf: training predictions from random forest
                 y_test_preds_lr: test predictions from logistic regression
@@ -156,7 +163,7 @@ class ChurnAnaysis():
         plt.text(0.01, 0.6, str('Random Forest Test'), {'fontsize': 10}, fontproperties = 'monospace')
         plt.text(0.01, 0.7, str(classification_report(self.y_train, y_train_preds_rf)), {'fontsize': 10}, fontproperties = 'monospace') # approach improved by OP -> monospace!
         plt.axis('off')
-        plt.plot()
+        plt.gcf().tight_layout()
         plt.savefig(constants.results_image_dict['rf'])
         plt.close()
 
@@ -166,7 +173,7 @@ class ChurnAnaysis():
         plt.text(0.01, 0.6, str('Logistic Regression Test'), {'fontsize': 10}, fontproperties = 'monospace')
         plt.text(0.01, 0.7, str(classification_report(self.y_test, y_test_preds_lr)), {'fontsize': 10}, fontproperties = 'monospace') # approach improved by OP -> monospace!
         plt.axis('off')
-        plt.plot()
+        plt.gcf().tight_layout()
         plt.savefig(constants.results_image_dict['lr'])
         plt.close()
 
@@ -201,6 +208,7 @@ class ChurnAnaysis():
 
         # Add feature names as x-axis labels
         plt.xticks(range(X_data.shape[1]), names, rotation=90)
+        plt.gcf().tight_layout()
         plt.savefig(output_pth)
 
     def train_models(self):
