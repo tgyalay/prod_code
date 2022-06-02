@@ -1,23 +1,24 @@
 ''''
-This library contains two independent functions and a class for running
-thorugh the procedure of analyzing the data. 
+This library contains three independent functions and a class for running
+thorugh the procedure of analyzing the data.
+Created on June 1 by Tamas Gyalay
 '''
 
 # import libraries
-import os
 import joblib
 
+from sklearn.metrics import plot_roc_curve, classification_report
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split, GridSearchCV
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns; sns.set()
-from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import plot_roc_curve, classification_report
-import shap
+import seaborn as sns
 
 import constants
+
+sns.set()
 
 
 def import_data(pth):
@@ -28,19 +29,22 @@ def import_data(pth):
             pth: a path to the csv
     output:
             df: pandas dataframe
-    '''	
+    '''
     return pd.read_csv(pth)
 
 
 def encoder_helper(df, category_lst, response):
     '''
-    helper function to turn each categorical column into a new column with
-    propotion of churn for each category - associated with cell 15 from the notebook
+    helper function to turn each categorical column into a new column
+    with proportion of churn for each category - associated with cell 15
+    from the notebook
 
     input:
             df: pandas dataframe
-            category_lst: list of columns that contain categorical features
-            response: string of response name [optional argument that could be used for naming variables or index y column]
+            category_lst: list of columns that contain categorical
+                features
+            response: string of response name [optional argument that
+                could be used for naming variables or index y column]
 
     output:
             df: pandas dataframe with new columns for
@@ -48,22 +52,58 @@ def encoder_helper(df, category_lst, response):
     final_df = df.copy()
     for category in category_lst:
         category_grouped = df.groupby(category).mean()['Churn'].rename(
-            '_'.join([category,response]))
+            '_'.join([category, response]))
         final_df = final_df.join(category_grouped, on=category)
 
     return final_df
 
 
+def feature_importance_plot(model, X_data, output_pth):
+    '''
+    creates and stores the feature importances in pth
+    input:
+            model: model object containing feature_importances_
+            X_data: pandas dataframe of X values
+            output_pth: path to store the figure
+
+    output:
+            None
+    '''
+    # Calculate feature importances
+    importances = model.feature_importances_
+    # Sort feature importances in descending order
+    indices = np.argsort(importances)[::-1]
+
+    # Rearrange feature names so they match the sorted feature importances
+    names = [X_data.columns[i] for i in indices]
+
+    # Create plot
+    plt.figure(figsize=(20, 5))
+
+    # Create plot title
+    plt.title("Feature Importance")
+    plt.ylabel('Importance')
+
+    # Add bars
+    plt.bar(range(X_data.shape[1]), importances[indices])
+
+    # Add feature names as x-axis labels
+    plt.xticks(range(X_data.shape[1]), names, rotation=90)
+    plt.gcf().tight_layout()
+    plt.savefig(output_pth)
+
+
 class ChurnAnaysis():
     '''
-    used to perform analysis for customer churn. 
+    used to perform analysis for customer churn.
 
     input:
             df: pandas dataframe
-    
+
     attributes:
             df pandas dataframe
     '''
+
     def __init__(self, pth):
         self.df = import_data(pth)
         self.df['Churn'] = self.df['Attrition_Flag'].apply(
@@ -81,27 +121,27 @@ class ChurnAnaysis():
 
         image_dict = constants.eda_image_dict
 
-        plt.figure(figsize=(20,10)) 
+        plt.figure(figsize=(20, 10))
         self.df['Churn'].hist()
         plt.savefig(image_dict['churn_png'])
         plt.close()
 
-        plt.figure(figsize=(20,10)) 
+        plt.figure(figsize=(20, 10))
         self.df['Customer_Age'].hist()
         plt.savefig(image_dict['customer_age'])
         plt.close()
 
-        plt.figure(figsize=(20,10)) 
+        plt.figure(figsize=(20, 10))
         self.df.Marital_Status.value_counts('normalize').plot(kind='bar')
         plt.savefig(image_dict['marital_status'])
         plt.close()
 
-        plt.figure(figsize=(20,10))
+        plt.figure(figsize=(20, 10))
         sns.histplot(self.df['Total_Trans_Ct'], stat='density', kde=True)
         plt.savefig(image_dict['trans_distro'])
         plt.close()
 
-        plt.figure(figsize=(20,10)) 
+        plt.figure(figsize=(20, 10))
         sns.heatmap(self.df.corr(), annot=False, cmap='Dark2_r', linewidths=2)
         plt.gcf().tight_layout()
         plt.savefig(image_dict['corr_heatmap'])
@@ -110,7 +150,9 @@ class ChurnAnaysis():
     def perform_feature_engineering(self, response='Churn'):
         '''
         input:
-                response: string of response name [optional argument that could be used for naming variables or index y column]
+                response: string of response name [optional argument
+                    that could be used for naming variables or index y
+                    column]
 
         attributes:
                 X_train: X training data
@@ -121,11 +163,11 @@ class ChurnAnaysis():
 
         cat_columns = constants.cat_columns
 
-        keep_cols = (constants.non_cat_keep_cols 
-                     + [category+'_'+response 
-                        for category in  constants.cat_columns
+        keep_cols = (constants.non_cat_keep_cols
+                     + [category + '_' + response
+                        for category in constants.cat_columns
                         ]
-                    )
+                     )
 
         self.df = encoder_helper(self.df,
                                  category_lst=cat_columns,
@@ -134,9 +176,9 @@ class ChurnAnaysis():
         y = self.df['Churn']
         X = self.df[keep_cols]
 
-        self.X_train, self.X_test, self.y_train, self.y_test =  (
-            train_test_split(X, y, test_size= 0.3, random_state=42)
-            )
+        self.X_train, self.X_test, self.y_train, self.y_test = (
+            train_test_split(X, y, test_size=0.3, random_state=42)
+        )
 
     def classification_report_image(self,
                                     y_train_preds_lr,
@@ -157,59 +199,57 @@ class ChurnAnaysis():
         '''
 
         plt.rc('figure', figsize=(5, 5))
-        #plt.text(0.01, 0.05, str(model.summary()), {'fontsize': 12}) old approach
-        plt.text(0.01, 1.25, str('Random Forest Train'), {'fontsize': 10}, fontproperties = 'monospace')
-        plt.text(0.01, 0.05, str(classification_report(self.y_test, y_test_preds_rf)), {'fontsize': 10}, fontproperties = 'monospace') # approach improved by OP -> monospace!
-        plt.text(0.01, 0.6, str('Random Forest Test'), {'fontsize': 10}, fontproperties = 'monospace')
-        plt.text(0.01, 0.7, str(classification_report(self.y_train, y_train_preds_rf)), {'fontsize': 10}, fontproperties = 'monospace') # approach improved by OP -> monospace!
+        # plt.text(0.01, 0.05, str(model.summary()), {'fontsize': 12}) old
+        # approach
+        plt.text(
+            0.01, 1.25,
+            str('Random Forest Train'),
+            {'fontsize': 10},
+            fontproperties='monospace')
+        plt.text(
+            0.01, 0.05,
+            str(classification_report(self.y_test, y_test_preds_rf)),
+            {'fontsize': 10},
+            fontproperties='monospace')
+        plt.text(
+            0.01, 0.6,
+            str('Random Forest Test'),
+            {'fontsize': 10},
+            fontproperties='monospace')
+        plt.text(
+            0.01, 0.7,
+            str(classification_report(self.y_train, y_train_preds_rf)),
+            {'fontsize': 10}, fontproperties='monospace')
         plt.axis('off')
         plt.gcf().tight_layout()
         plt.savefig(constants.results_image_dict['rf'])
         plt.close()
 
         plt.rc('figure', figsize=(5, 5))
-        plt.text(0.01, 1.25, str('Logistic Regression Train'), {'fontsize': 10}, fontproperties = 'monospace')
-        plt.text(0.01, 0.05, str(classification_report(self.y_train, y_train_preds_lr)), {'fontsize': 10}, fontproperties = 'monospace') # approach improved by OP -> monospace!
-        plt.text(0.01, 0.6, str('Logistic Regression Test'), {'fontsize': 10}, fontproperties = 'monospace')
-        plt.text(0.01, 0.7, str(classification_report(self.y_test, y_test_preds_lr)), {'fontsize': 10}, fontproperties = 'monospace') # approach improved by OP -> monospace!
+        plt.text(
+            0.01, 1.25,
+            str('Logistic Regression Train'),
+            {'fontsize': 10},
+            fontproperties='monospace')
+        plt.text(
+            0.01, 0.05,
+            str(classification_report(self.y_train, y_train_preds_lr)),
+            {'fontsize': 10},
+            fontproperties='monospace')  # approach improved by OP->monospace!
+        plt.text(
+            0.01, 0.6,
+            str('Logistic Regression Test'),
+            {'fontsize': 10},
+            fontproperties='monospace')
+        plt.text(
+            0.01, 0.7,
+            str(classification_report(self.y_test, y_test_preds_lr)),
+            {'fontsize': 10},
+            fontproperties='monospace')
         plt.axis('off')
         plt.gcf().tight_layout()
         plt.savefig(constants.results_image_dict['lr'])
         plt.close()
-
-    def feature_importance_plot(self, model, X_data, output_pth):
-        '''
-        creates and stores the feature importances in pth
-        input:
-                model: model object containing feature_importances_
-                X_data: pandas dataframe of X values
-                output_pth: path to store the figure
-
-        output:
-                None
-        '''
-        # Calculate feature importances
-        importances = model.feature_importances_
-        # Sort feature importances in descending order
-        indices = np.argsort(importances)[::-1]
-
-        # Rearrange feature names so they match the sorted feature importances
-        names = [X_data.columns[i] for i in indices]
-
-        # Create plot
-        plt.figure(figsize=(20,5))
-
-        # Create plot title
-        plt.title("Feature Importance")
-        plt.ylabel('Importance')
-
-        # Add bars
-        plt.bar(range(X_data.shape[1]), importances[indices])
-
-        # Add feature names as x-axis labels
-        plt.xticks(range(X_data.shape[1]), names, rotation=90)
-        plt.gcf().tight_layout()
-        plt.savefig(output_pth)
 
     def train_models(self):
         '''
@@ -224,14 +264,15 @@ class ChurnAnaysis():
         '''
         rfc = RandomForestClassifier(random_state=42)
         # Use a different solver if the default 'lbfgs' fails to converge
-        # Reference: https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
+        # Reference:
+        # https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
         lrc = LogisticRegression(solver='lbfgs', max_iter=3000)
 
-        param_grid = { 
+        param_grid = {
             'n_estimators': [200, 500],
             'max_features': ['auto', 'sqrt'],
-            'max_depth' : [4,5,100],
-            'criterion' :['gini', 'entropy']
+            'max_depth': [4, 5, 100],
+            'criterion': ['gini', 'entropy']
         }
 
         cv_rfc = GridSearchCV(estimator=rfc, param_grid=param_grid, cv=5)
@@ -250,10 +291,10 @@ class ChurnAnaysis():
             y_train_preds_rf=y_train_preds_rf,
             y_test_preds_lr=y_test_preds_lr,
             y_test_preds_rf=y_test_preds_rf
-            )
-                    
+        )
+
         lrc_plot = plot_roc_curve(lrc, self.X_test, self.y_test)
-        
+
         plt.figure(figsize=(15, 8))
         ax = plt.gca()
         plot_roc_curve(cv_rfc.best_estimator_,
@@ -265,7 +306,7 @@ class ChurnAnaysis():
         joblib.dump(cv_rfc.best_estimator_, constants.models_dict['rf'])
         joblib.dump(lrc, constants.models_dict['lr'])
 
-        self.feature_importance_plot(
-            cv_rfc.best_estimator_, 
+        feature_importance_plot(
+            cv_rfc.best_estimator_,
             self.X_train,
             constants.results_image_dict['feature_importance'])
