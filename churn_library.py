@@ -102,12 +102,20 @@ class ChurnAnaysis():
 
     attributes:
             df pandas dataframe
+            X_train: pandas dataframe or None training features
+            X_test: pandas dataframe or None test features
+            y_train: pandas dataframe or None training classifications
+            y_test: pandas dataframe or None testing true results
     '''
 
     def __init__(self, pth):
         self.df = import_data(pth)
         self.df['Churn'] = self.df['Attrition_Flag'].apply(
             lambda val: 0 if val == "Existing Customer" else 1)
+        self.X_train = None
+        self.X_test = None
+        self.y_train = None
+        self.y_test = None
 
     def perform_eda(self):
         '''
